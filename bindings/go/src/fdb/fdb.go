@@ -33,6 +33,7 @@ import (
 	"log"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -335,7 +336,11 @@ func createDatabase(clusterFile string) (Database, error) {
 	}
 
 	db := &database{outdb}
-	runtime.SetFinalizer(db, (*database).destroy)
+	atomic.AddUint32(&databasesCreated, 1)
+	runtime.SetFinalizer(db, func(db *database) {
+		db.destroy()
+		atomic.AddUint32(&databasesDestroyed, 1)
+	})
 
 	return Database{db}, nil
 }

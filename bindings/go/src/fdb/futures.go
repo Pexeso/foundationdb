@@ -41,6 +41,7 @@ import "C"
 import (
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -76,7 +77,11 @@ type future struct {
 
 func newFuture(ptr *C.FDBFuture) *future {
 	f := &future{ptr}
-	runtime.SetFinalizer(f, func(f *future) { C.fdb_future_destroy(f.ptr) })
+	atomic.AddUint32(&futuresCreated, 1)
+	runtime.SetFinalizer(f, func(f *future) {
+		C.fdb_future_destroy(f.ptr)
+		atomic.AddUint32(&futuresDestroyed, 1)
+	})
 	return f
 }
 

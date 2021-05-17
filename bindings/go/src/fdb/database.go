@@ -28,6 +28,7 @@ import "C"
 
 import (
 	"runtime"
+	"sync/atomic"
 )
 
 // Database is a handle to a FoundationDB database. Database is a lightweight
@@ -75,7 +76,11 @@ func (d Database) CreateTransaction() (Transaction, error) {
 	}
 
 	t := &transaction{outt, d}
-	runtime.SetFinalizer(t, (*transaction).destroy)
+	atomic.AddUint32(&transactionsCreated, 1)
+	runtime.SetFinalizer(t, func(tr *transaction) {
+		tr.destroy()
+		atomic.AddUint32(&transactionsDestroyed, 1)
+	})
 
 	return Transaction{t}, nil
 }
